@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:latest
+    container_name: inflearn-clone-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: prisma
+      POSTGRES_PASSWORD: prismapass
+      POSTGRES_DB: inflearn_clone
+    volumes:
+      - inflearn_clone_db:/var/lib/postgresql/data
+
+volumes:
+  inflearn_clone_db:
