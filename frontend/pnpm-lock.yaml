@@ -107,6 +107,9 @@ dependencies:
   cmdk:
     specifier: ^1.1.1
     version: 1.1.1(@types/react-dom@19.1.2)(@types/react@19.1.1)(react-dom@19.1.0)(react@19.1.0)
+  cookies-next:
+    specifier: ^5.1.0
+    version: 5.1.0(next@15.3.0)(react@19.1.0)
   date-fns:
     specifier: ^4.1.0
     version: 4.1.0
@@ -2293,6 +2296,22 @@ packages:
   /cookie@0.7.1:
     resolution: {integrity: sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==}
     engines: {node: '>= 0.6'}
+    dev: false
+
+  /cookie@1.0.2:
+    resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
+    engines: {node: '>=18'}
+    dev: false
+
+  /cookies-next@5.1.0(next@15.3.0)(react@19.1.0):
+    resolution: {integrity: sha512-9Ekne+q8hfziJtnT9c1yDUBqT0eDMGgPrfPl4bpR3xwQHLTd/8gbSf6+IEkP/pjGsDZt1TGbC6emYmFYRbIXwQ==}
+    peerDependencies:
+      next: '>=15.0.0'
+      react: '>= 16.8.0'
+    dependencies:
+      cookie: 1.0.2
+      next: 15.3.0(react-dom@19.1.0)(react@19.1.0)
+      react: 19.1.0
     dev: false
 
   /csstype@3.1.3:
