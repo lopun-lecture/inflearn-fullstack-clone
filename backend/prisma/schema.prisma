@@ -8,6 +8,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator prismaClassGenerator {
+  provider               = "prisma-class-generator"
+  dryRun                 = "false"
+  separateRelationFields = "false"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -84,6 +90,7 @@ model Course {
   price            Int      @default(0)
   discountPrice    Int?     @map("discount_price")
   level            String   @default("BEGINEER")
+  status           String   @default("DRAFT")
   instructorId     String   @map("instructor_id")
   isPublished      Boolean  @default(false) @map("is_published")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -91,7 +98,7 @@ model Course {
 
   sections    Section[]
   lectures    Lecture[]
-  category    CourseCategory[]
+  categories  CourseCategory[]
   enrollments CourseEnrollment[]
   instructor  User               @relation(fields: [instructorId], references: [id])
   reviews     CourseReview[]
