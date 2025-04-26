@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "openapi-ts": "openapi-ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.8.0",
@@ -66,6 +67,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@hey-api/client-next": "^0.3.0",
+    "@hey-api/openapi-ts": "^0.66.6",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20",
