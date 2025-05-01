@@ -32,6 +32,7 @@ export class MediaService {
     );
 
     return {
+      fileName: file.originalname,
       storageType: 's3',
       s3: {
         bucket: process.env.AWS_MEDIA_S3_BUCKET_NAME,
