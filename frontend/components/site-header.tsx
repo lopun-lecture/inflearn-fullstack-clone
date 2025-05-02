@@ -13,6 +13,8 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { CATEGORY_ICONS } from "@/app/constants/category-icons";
+import React from "react";
 
 export default function SiteHeader({
   profile,
@@ -124,7 +126,14 @@ export default function SiteHeader({
             {categories.map((category) => (
               <Link key={category.id} href={`/courses/${category.slug}`}>
                 <div className="category-item flex flex-col items-center min-w-[72px] text-gray-700 hover:text-[#1dc078] cursor-pointer transition-colors">
-                  <Layers size={28} className="mb-1" />
+                  {/* <Layers size={28} className="mb-1" /> */}
+                  {React.createElement(
+                    CATEGORY_ICONS[category.slug] || CATEGORY_ICONS["default"],
+                    {
+                      size: 28,
+                      className: "mb-1",
+                    }
+                  )}
                   <span className="text-xs font-medium whitespace-nowrap">
                     {category.name}
                   </span>
