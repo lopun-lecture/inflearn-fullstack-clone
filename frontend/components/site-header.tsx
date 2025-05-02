@@ -1,6 +1,6 @@
 "use client";
 
-import { CourseCategory } from "@/generated/openapi-client";
+import { CourseCategory, User } from "@/generated/openapi-client";
 import { Layers, Search } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 export default function SiteHeader({
+  profile,
   categories,
 }: {
+  profile?: User;
   categories: CourseCategory[];
 }) {
   const pathname = usePathname();
@@ -77,14 +84,38 @@ export default function SiteHeader({
             지식공유자
           </Button>
         </Link>
-        {/* Avatar */}
-        <Avatar className="ml-2">
-          <AvatarFallback>
-            <span role="img" aria-label="user">
-              👤
-            </span>
-          </AvatarFallback>
-        </Avatar>
+        {/* Avatar + Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <div className="ml-2 cursor-pointer">
+              <Avatar>
+                {profile?.image ? (
+                  <img
+                    src={profile.image}
+                    alt="avatar"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <AvatarFallback>
+                    <span role="img" aria-label="user">
+                      👤
+                    </span>
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </div>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 p-0">
+            <button
+              className="w-full text-left px-4 py-3 hover:bg-gray-100 focus:outline-none"
+              onClick={() => (window.location.href = "/my/settings/account")}
+            >
+              <div className="font-semibold text-gray-800">
+                {profile?.name || profile?.email || "내 계정"}
+              </div>
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
       {/* 하단 카테고리 */}
       <div className="header-bottom bg-white px-8">
