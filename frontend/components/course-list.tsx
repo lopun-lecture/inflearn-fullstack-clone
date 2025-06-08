@@ -68,16 +68,7 @@ export default async function CourseList({
   const buildPageUrl = (pageNumber: number) => {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (category) params.set("category", category);
-    if (priceRange) {
-      // PriceRangeDto 객체를 JSON 문자열로 변환
-      params.set("priceRange", JSON.stringify(priceRange));
-    }
-    if (sortBy) params.set("sortBy", sortBy);
-    if (order) params.set("order", order);
-    params.set("page", pageNumber.toString());
-    if (pageSize !== 20) params.set("pageSize", pageSize.toString());
-
+    params.set("page_number", pageNumber.toString());
     return `${baseUrl}?${params.toString()}`;
   };
 
