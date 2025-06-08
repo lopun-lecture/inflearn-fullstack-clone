@@ -197,16 +197,13 @@ export class CoursesService {
     const hasPrev = page > 1;
 
     return {
-      success: true,
-      data: {
-        courses: courses as any[],
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalItems,
-          hasNext,
-          hasPrev,
-        },
+      courses: courses as any[],
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems,
+        hasNext,
+        hasPrev,
       },
     };
   }

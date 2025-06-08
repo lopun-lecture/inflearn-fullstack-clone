@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: process.env.CLOUDFRONT_DOMAIN as string,
       },
+      {
+        protocol: "https",
+        hostname: "cdn.inflearn.com",
+      },
     ],
   },
 };
