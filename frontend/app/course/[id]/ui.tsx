@@ -477,7 +477,7 @@ export default function CourseDetailUI({
   course: CourseDetailDto;
 }) {
   return (
-    <div className="mx-auto px-4 py-12 pb-24 lg:pb-12">
+    <div className="mx-auto px-4 pb-24 lg:pb-12">
       <Header course={course} />
 
       <div className="mt-12 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10">

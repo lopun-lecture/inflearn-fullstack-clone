@@ -11,6 +11,8 @@ import slugify from 'lib/slugify';
 import { SearchCourseDto } from './dto/search-course.dto';
 import { SearchCourseResponseDto } from './dto/search-response.dto';
 import { CourseDetailDto } from './dto/course-deatil.dto';
+import { GetFavoriteResponseDto } from './dto/favorite.dto';
+import { CourseFavorite as CourseFavoriteEntity } from 'src/_gen/prisma-class/course_favorite';
 
 @Injectable()
 export class CoursesService {
@@ -276,5 +278,105 @@ export class CoursesService {
         hasPrev,
       },
     };
+  }
+
+  async addFavorite(courseId: string, userId: string): Promise<boolean> {
+    try {
+      const existingFavorite = await this.prisma.courseFavorite.findFirst({
+        where: {
+          userId,
+          courseId,
+        },
+      });
+      if (existingFavorite) {
+        return true;
+      }
+
+      await this.prisma.courseFavorite.create({
+        data: {
+          userId,
+          courseId,
+        },
+      });
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
+  async removeFavorite(courseId: string, userId: string): Promise<boolean> {
+    try {
+      const existingFavorite = await this.prisma.courseFavorite.findFirst({
+        where: {
+          userId,
+          courseId,
+        },
+      });
+      if (existingFavorite) {
+        await this.prisma.courseFavorite.delete({
+          where: {
+            id: existingFavorite.id,
+          },
+        });
+        return true;
+      }
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
+  async getFavorite(
+    courseId: string,
+    userId?: string,
+  ): Promise<GetFavoriteResponseDto> {
+    const course = await this.prisma.course.findUnique({
+      where: {
+        id: courseId,
+      },
+      include: {
+        _count: {
+          select: {
+            favorites: true,
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`${course.id} 코스를 찾지 못했습니다.`);
+    }
+
+    if (userId) {
+      const existingFavorite = await this.prisma.courseFavorite.findFirst({
+        where: {
+          userId,
+          courseId,
+        },
+      });
+      return {
+        isFavorite: !!existingFavorite,
+        favoriteCount: course._count.favorites,
+      };
+    } else {
+      return {
+        isFavorite: false,
+        favoriteCount: course._count.favorites,
+      };
+    }
+  }
+
+  async getMyFavorites(userId: string): Promise<CourseFavoriteEntity[]> {
+    const existingFavorites = await this.prisma.courseFavorite.findMany({
+      where: {
+        userId,
+      },
+    });
+
+    return existingFavorites as unknown as CourseFavoriteEntity[];
   }
 }
