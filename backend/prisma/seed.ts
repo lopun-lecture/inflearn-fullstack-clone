@@ -55,6 +55,86 @@ async function main() {
     return ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'][randomNumber];
   };
 
+  // 랜덤 생성 함수들 추가
+  const generateRandomSectionData = () => {
+    const sectionTitles = [
+      '기초 개념 이해하기',
+      '실전 프로젝트 시작',
+      '심화 기능 학습',
+      '고급 기술 활용',
+      '프로젝트 완성하기',
+      '배포와 운영',
+    ];
+    const sectionCount = Math.floor(Math.random() * 3) + 3; // 3-5개
+    return Array.from({ length: sectionCount }, (_, index) => ({
+      title: sectionTitles[index % sectionTitles.length],
+      description: `${index + 1}번째 섹션입니다.`,
+      order: index + 1,
+    }));
+  };
+
+  const generateRandomLectureData = (sectionCount: number) => {
+    const lectureTitles = [
+      '개념 소개',
+      '기본 사용법',
+      '실습하기',
+      '심화 학습',
+      '프로젝트 적용',
+      '문제 해결',
+      '최적화',
+      '정리 및 마무리',
+    ];
+    const lectureCount = Math.floor(Math.random() * 4) + 3; // 3-6개
+    return Array.from({ length: lectureCount }, (_, index) => ({
+      title: lectureTitles[index % lectureTitles.length],
+      description: `강의 ${index + 1}번의 설명입니다.`,
+      order: index + 1,
+      duration: Math.floor(Math.random() * (1200 - 300 + 1)) + 300, // 5-20분을 초 단위로 (300-1200초)
+      isPreview: index < 2, // 처음 2개는 미리보기
+    }));
+  };
+
+  const generateRandomReviews = () => {
+    const reviewContents = [
+      '정말 유익한 강의였습니다. 실무에 바로 적용할 수 있는 내용들이 많았어요.',
+      '강사님의 설명이 너무 이해하기 쉬웠습니다. 추천합니다!',
+      '초보자도 따라할 수 있을 정도로 친절하게 설명해주셨네요.',
+      '실습 위주의 강의라서 더 도움이 되었습니다.',
+      '기대했던 것보다 더 많은 것을 배울 수 있었습니다.',
+    ];
+    // 각 강의당 하나의 리뷰만 생성 (유니크 제약 조건 때문에)
+    const randomIndex = Math.floor(Math.random() * reviewContents.length);
+    return {
+      content: reviewContents[randomIndex],
+      rating: Math.floor(Math.random() * 2) + 4, // 4-5점
+      userId: userId,
+    };
+  };
+
+  const generateRandomQuestions = () => {
+    const questionTitles = [
+      '설치 중 오류가 발생합니다',
+      '이 부분이 잘 이해가 안 돼요',
+      '실습 환경 설정 질문',
+      '추가 학습 자료 추천 부탁드립니다',
+      '프로젝트 적용 시 문제점',
+    ];
+    const questionContents = [
+      '강의를 듣다가 막힌 부분이 있어서 질문드립니다.',
+      '이 부분에 대해 더 자세한 설명 부탁드려요.',
+      '실습 환경 설정에서 어려움을 겪고 있습니다.',
+      '관련된 추가 자료가 있다면 공유해주세요.',
+      '실제 프로젝트에 적용하려는데 어려움이 있습니다.',
+    ];
+    // 각 강의당 하나의 질문만 생성
+    const randomIndex = Math.floor(Math.random() * questionTitles.length);
+    return {
+      title: questionTitles[randomIndex],
+      content: questionContents[randomIndex],
+      userId: userId,
+    };
+  };
+
   // 2. 강의 데이터 배열 (30개 전체)
   const now = new Date();
   const courseData = [
@@ -379,6 +459,87 @@ async function main() {
     });
   }
   console.log('강의 30개가 성공적으로 생성되었습니다.');
+
+  // 4. 모든 강의에 대한 추가 데이터 생성
+  const courses = await prisma.course.findMany();
+
+  // Section과 Lecture 데이터 삭제 후 재생성
+  await prisma.lecture.deleteMany({});
+  await prisma.section.deleteMany({});
+
+  for (const course of courses) {
+    // 섹션 생성
+    const sectionData = generateRandomSectionData();
+    const createdSections = [];
+
+    for (const section of sectionData) {
+      const createdSection = await prisma.section.create({
+        data: {
+          ...section,
+          courseId: course.id,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      createdSections.push(createdSection);
+    }
+
+    // 각 섹션에 강의 생성
+    for (const section of createdSections) {
+      const lectureData = generateRandomLectureData(createdSections.length);
+
+      for (const lecture of lectureData) {
+        await prisma.lecture.create({
+          data: {
+            ...lecture,
+            sectionId: section.id,
+            courseId: course.id,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+      }
+    }
+
+    // 리뷰 생성
+    const reviewData = generateRandomReviews();
+    await prisma.courseReview.create({
+      data: {
+        ...reviewData,
+        courseId: course.id,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    // 수강 등록 생성
+    await prisma.courseEnrollment.create({
+      data: {
+        userId: userId,
+        courseId: course.id,
+        enrolledAt: new Date(
+          now.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000,
+        ), // 최근 30일 내
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    // 질문 생성
+    const questionData = generateRandomQuestions();
+    await prisma.courseQuestion.create({
+      data: {
+        ...questionData,
+        courseId: course.id,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
+
+  console.log(
+    '모든 강의에 대한 섹션, 강의, 리뷰, 수강등록, 질문 데이터가 생성되었습니다.',
+  );
 }
 
 main()
