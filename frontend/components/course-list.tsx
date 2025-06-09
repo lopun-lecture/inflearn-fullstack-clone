@@ -10,6 +10,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { auth } from "@/auth";
 
 interface CourseListProps extends SearchCourseDto {
   baseUrl?: string;
@@ -25,6 +26,8 @@ export default async function CourseList({
   pageSize = 20,
   baseUrl = "",
 }: CourseListProps) {
+  const session = await auth();
+
   const { data, error } = await api.searchCourses({
     q,
     category,
@@ -137,7 +140,7 @@ export default async function CourseList({
       {/* 강의 목록 Grid */}
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {data.courses.map((course) => (
-          <CourseCard key={course.id} course={course} />
+          <CourseCard key={course.id} course={course} user={session?.user} />
         ))}
       </div>
 

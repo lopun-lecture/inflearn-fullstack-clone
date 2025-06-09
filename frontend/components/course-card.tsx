@@ -1,24 +1,72 @@
 "use client";
 
-import { Course } from "@/generated/openapi-client";
-import { Heart, ShoppingCart } from "lucide-react";
+import {
+  Course as CourseEntity,
+  CourseFavorite as CourseFavoriteEntity,
+} from "@/generated/openapi-client";
+import { HeartIcon, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getLevelText } from "@/lib/level";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import * as api from "@/lib/api";
+import { User } from "next-auth";
+import { cn } from "@/lib/utils";
 
 interface CourseCardProps {
-  course: Course;
+  user?: User;
+  course: CourseEntity;
 }
 
-export default function CourseCard({ course }: CourseCardProps) {
+export default function CourseCard({ user, course }: CourseCardProps) {
   const router = useRouter();
+  const getMyFavoritesQuery = useQuery({
+    queryKey: ["my-favorites", user?.id],
+    queryFn: async () => {
+      if (user) {
+        return api.getMyFavorites();
+      }
+
+      return null;
+    },
+  });
+  const isFavorite = getMyFavoritesQuery.data?.data?.find(
+    (fav) => fav.courseId === course.id
+  );
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    alert("구현 예정");
+    if (user) {
+      if (isFavorite) {
+        removeFavoriteMutation.mutate();
+      } else {
+        addFavoriteMutation.mutate();
+      }
+    } else {
+      alert("로그인 후 이용하세요.");
+    }
   };
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: () => api.addFavorite(course.id),
+    onSuccess: () => {
+      getMyFavoritesQuery.refetch();
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: () => {
+      return api.removeFavorite(course.id);
+    },
+    onSuccess: () => {
+      getMyFavoritesQuery.refetch();
+    },
+  });
+
+  const isFavoriteDisabled =
+    addFavoriteMutation.isPending || removeFavoriteMutation.isPending;
 
   const handleCartClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -59,7 +107,13 @@ export default function CourseCard({ course }: CourseCardProps) {
             className="h-8 w-8 p-0"
             onClick={handleFavoriteClick}
           >
-            <Heart className="h-4 w-4" />
+            <HeartIcon
+              className={cn(
+                "size-4 transition-colors",
+                isFavorite ? "fill-red-500 text-red-500" : "text-gray-500",
+                isFavoriteDisabled && "cursor-not-allowed"
+              )}
+            />
           </Button>
           <Button
             size="sm"
