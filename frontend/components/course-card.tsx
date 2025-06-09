@@ -4,25 +4,16 @@ import { Course } from "@/generated/openapi-client";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { getLevelText } from "@/lib/level";
 
 interface CourseCardProps {
   course: Course;
 }
 
-function getLevelText(level: string): string {
-  switch (level.toUpperCase()) {
-    case "BEGINNER":
-      return "입문";
-    case "INTERMEDIATE":
-      return "초급";
-    case "ADVANCED":
-      return "중급";
-    default:
-      return level;
-  }
-}
-
 export default function CourseCard({ course }: CourseCardProps) {
+  const router = useRouter();
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -47,7 +38,10 @@ export default function CourseCard({ course }: CourseCardProps) {
   };
 
   return (
-    <div className="group relative cursor-pointer overflow-hidden bg-white transition-all duration-300">
+    <div
+      className="group relative cursor-pointer overflow-hidden bg-white transition-all duration-300"
+      onClick={() => router.push(`/course/${course.id}`)}
+    >
       {/* 썸네일 이미지 */}
       <div className="relative aspect-video overflow-hidden">
         <Image
