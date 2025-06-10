@@ -27,6 +27,16 @@ import { getLevelText } from "@/lib/level";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as api from "@/lib/api";
 import { User } from "next-auth";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 
 /*****************
  * Helper Utils  *
@@ -380,6 +390,10 @@ function FloatingMenu({
   user?: User;
   course: CourseDetailDto;
 }) {
+  const [isEnrolled, setIsEnrolled] = useState(course.isEnrolled);
+  const [showEnrollSuccessDialog, setShowEnrollSuccessDialog] = useState(false);
+  const router = useRouter();
+
   const getFavoriteQuery = useQuery({
     queryKey: ["favorite", course.id],
     queryFn: () => api.getFavorite(course.id),
@@ -421,77 +435,167 @@ function FloatingMenu({
     }
   }, [user, getFavoriteQuery, addFavoriteMutation, removeFavoriteMutation]);
 
+  const enrollMutation = useMutation({
+    mutationFn: () => api.enrollCourse(course.id),
+    onSuccess: () => {
+      setIsEnrolled(true);
+      setShowEnrollSuccessDialog(true);
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleEnroll = useCallback(() => {
+    if (isEnrolled) {
+      alert("이미 수강신청한 강의입니다. 수강 화면으로 이동해주세요.");
+      return;
+    }
+
+    if (!user) {
+      alert("로그인 후 이용해주세요.");
+      return;
+    }
+
+    if (course.price > 0) {
+      alert("결제는 추후 구현 예정입니다. 무료 강의를 이용해주세요.");
+      return;
+    }
+
+    enrollMutation.mutate();
+  }, [course, user, enrollMutation, isEnrolled]);
+
+  const handleStartLearning = () => {
+    setShowEnrollSuccessDialog(false);
+    router.push(`/courses/lecture?courseId=${course.id}`);
+  };
+
   return (
-    <aside className="lg:sticky lg:top-24 lg:self-start lg:block hidden">
-      <div className="border rounded-md w-80">
-        <div className="p-6 space-y-4">
-          {/* 가격 */}
-          <div>
-            {course.discountPrice ? (
-              <>
-                <span className="text-2xl font-bold text-primary">
-                  {course.discountPrice.toLocaleString()}원
-                </span>
-                <span className="ml-2 line-through text-muted-foreground">
-                  {course.price.toLocaleString()}원
-                </span>
-              </>
+    <>
+      <aside className="lg:sticky lg:top-24 lg:self-start lg:block hidden">
+        <div className="border rounded-md w-80">
+          <div className="p-6 space-y-4">
+            {/* 가격 */}
+            <div>
+              {course.price > 0 &&
+                (course.discountPrice ? (
+                  <>
+                    <span className="text-2xl font-bold text-primary">
+                      {course.discountPrice.toLocaleString()}원
+                    </span>
+                    <span className="ml-2 line-through text-muted-foreground">
+                      {course.price.toLocaleString()}원
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-2xl font-bold">
+                    {course.price.toLocaleString()}원
+                  </span>
+                ))}
+              {course.price === 0 && (
+                <span className="text-2xl font-bold">무료</span>
+              )}
+            </div>
+            {isEnrolled ? (
+              <button
+                onClick={() => {
+                  router.push(`/courses/lecture?courseId=${course.id}`);
+                }}
+                className={cn(
+                  "cursor-pointer w-full py-2 px-4 rounded-md bg-primary text-white font-semibold"
+                )}
+              >
+                학습으로 이동하기
+              </button>
             ) : (
-              <span className="text-2xl font-bold">
-                {course.price.toLocaleString()}원
-              </span>
+              <button
+                onClick={handleEnroll}
+                disabled={enrollMutation.isPending}
+                className={cn(
+                  "cursor-pointer w-full py-2 px-4 rounded-md bg-primary text-white font-semibold",
+                  enrollMutation.isPending && "cursor-not-allowed"
+                )}
+              >
+                수강신청 하기
+              </button>
             )}
-          </div>
-          <button className="cursor-pointer w-full py-2 px-4 rounded-md bg-primary text-white font-semibold">
-            수강신청 하기
-          </button>
-          <button
-            onClick={handleCart}
-            className="cursor-pointer w-full py-2 px-4 rounded-md border font-medium"
-          >
-            바구니에 담기
-          </button>
-          <button
-            onClick={handleFavorite}
-            disabled={isFavoriteDisabled}
-            className={cn(
-              "cursor-pointer w-full py-2 px-4 rounded-md border font-medium flex items-center justify-center gap-2 transition-colors",
-              getFavoriteQuery.data?.data?.isFavorite
-                ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
-                : "hover:bg-gray-50",
-              isFavoriteDisabled && "cursor-not-allowed"
-            )}
-          >
-            <HeartIcon
+            <button
+              onClick={handleCart}
+              className="cursor-pointer w-full py-2 px-4 rounded-md border font-medium"
+            >
+              바구니에 담기
+            </button>
+            <button
+              onClick={handleFavorite}
+              disabled={isFavoriteDisabled}
               className={cn(
-                "size-4 transition-colors",
+                "cursor-pointer w-full py-2 px-4 rounded-md border font-medium flex items-center justify-center gap-2 transition-colors",
                 getFavoriteQuery.data?.data?.isFavorite
-                  ? "fill-red-500 text-red-500"
-                  : "text-gray-500",
+                  ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
+                  : "hover:bg-gray-50",
                 isFavoriteDisabled && "cursor-not-allowed"
               )}
-            />
-            {getFavoriteQuery.data?.data?.favoriteCount ?? 0}
-          </button>
+            >
+              <HeartIcon
+                className={cn(
+                  "size-4 transition-colors",
+                  getFavoriteQuery.data?.data?.isFavorite
+                    ? "fill-red-500 text-red-500"
+                    : "text-gray-500",
+                  isFavoriteDisabled && "cursor-not-allowed"
+                )}
+              />
+              {getFavoriteQuery.data?.data?.favoriteCount ?? 0}
+            </button>
+          </div>
+          {/* info section */}
+          <div className="bg-[#F8F9FA] p-6 space-y-1 text-sm rounded-b-md">
+            <p>
+              <strong>지식공유자:</strong> {course.instructor.name}
+            </p>
+            <p>
+              <strong>강의 수:</strong> {course.totalLectures}개
+            </p>
+            <p>
+              <strong>강의 시간:</strong>{" "}
+              {formatSecondsToHourMin(course.totalDuration)}
+            </p>
+            <p>
+              <strong>난이도:</strong> {getLevelText(course.level)}
+            </p>
+          </div>
         </div>
-        {/* info section */}
-        <div className="bg-[#F8F9FA] p-6 space-y-1 text-sm rounded-b-md">
-          <p>
-            <strong>지식공유자:</strong> {course.instructor.name}
-          </p>
-          <p>
-            <strong>강의 수:</strong> {course.totalLectures}개
-          </p>
-          <p>
-            <strong>강의 시간:</strong>{" "}
-            {formatSecondsToHourMin(course.totalDuration)}
-          </p>
-          <p>
-            <strong>난이도:</strong> {getLevelText(course.level)}
-          </p>
-        </div>
-      </div>
-    </aside>
+      </aside>
+
+      {/* 수강신청 완료 다이얼로그 */}
+      <Dialog
+        open={showEnrollSuccessDialog}
+        onOpenChange={setShowEnrollSuccessDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>수강신청 완료</DialogTitle>
+            <DialogDescription>
+              수강신청이 완료되었어요. 강의실로 이동하여 바로 학습하시겠어요?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setShowEnrollSuccessDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleStartLearning}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md transition-colors"
+            >
+              바로 학습 시작
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
