@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +24,8 @@ import { CreateLectureDto } from './dto/create-lecture.dto';
 import { Lecture as LectureEntity } from 'src/_gen/prisma-class/lecture';
 import { Request } from 'express';
 import { UpdateLectureDto } from './dto/update-lecture.dto';
+import { LectureActivity as LectureActivityEntity } from 'src/_gen/prisma-class/lecture_activity';
+import { UpdateLectureActivityDto } from './dto/update-lecture-activity.dto';
 
 @ApiTags('개별 강의')
 @Controller('lectures')
@@ -97,5 +100,38 @@ export class LecturesController {
   })
   delete(@Param('lectureId') lectureId: string, @Req() req: Request) {
     return this.lecturesService.remove(lectureId, req.user.sub);
+  }
+
+  @Put(':lectureId/activity')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({
+    description: '개별 강의 활동 이벤트 업데이트',
+    type: LectureActivityEntity,
+  })
+  updateLectureActivity(
+    @Req() req: Request,
+    @Param('lectureId') lectureId: string,
+    @Body() updateLectureActivityDto: UpdateLectureActivityDto,
+  ) {
+    return this.lecturesService.updateLectureActivity(
+      lectureId,
+      req.user.sub,
+      updateLectureActivityDto,
+    );
+  }
+
+  @Get(':lectureId/activity')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({
+    description: '개별 강의 활동 이벤트 조회',
+    type: LectureActivityEntity,
+  })
+  getLectureActivity(
+    @Req() req: Request,
+    @Param('lectureId') lectureId: string,
+  ) {
+    return this.lecturesService.getLectureActivity(lectureId, req.user.sub);
   }
 }

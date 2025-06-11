@@ -5,7 +5,7 @@ import {
   coursesControllerAddFavorite,
   coursesControllerCreate,
   coursesControllerEnrollCourse,
-  coursesControllerFindAll,
+  coursesControllerFindAllMyCourses,
   coursesControllerFindOne,
   coursesControllerGetFavorite,
   coursesControllerGetMyFavorites,
@@ -38,7 +38,7 @@ export const getAllCategories = async () => {
 };
 
 export const getAllInstructorCourses = async () => {
-  const { data, error } = await coursesControllerFindAll();
+  const { data, error } = await coursesControllerFindAllMyCourses();
 
   return {
     data,

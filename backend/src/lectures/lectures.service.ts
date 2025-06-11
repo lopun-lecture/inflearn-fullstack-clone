@@ -6,6 +6,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateLectureDto } from './dto/create-lecture.dto';
 import { UpdateLectureDto } from './dto/update-lecture.dto';
+import { UpdateLectureActivityDto } from './dto/update-lecture-activity.dto';
 
 @Injectable()
 export class LecturesService {
@@ -140,5 +141,47 @@ export class LecturesService {
     });
 
     return lecture;
+  }
+
+  async updateLectureActivity(
+    lectureId: string,
+    userId: string,
+    updateLectureActivityDto: UpdateLectureActivityDto,
+  ) {
+    const result = await this.prisma.lectureActivity.upsert({
+      where: {
+        userId_lectureId: {
+          userId,
+          lectureId,
+        },
+      },
+      create: {
+        userId,
+        lectureId,
+        progress: updateLectureActivityDto.progress,
+        isCompleted: updateLectureActivityDto.isCompleted,
+        lastWatchedAt: updateLectureActivityDto.lastWatchedAt,
+      },
+      update: {
+        progress: updateLectureActivityDto.progress,
+        isCompleted: updateLectureActivityDto.isCompleted,
+        lastWatchedAt: updateLectureActivityDto.lastWatchedAt,
+      },
+    });
+
+    return result;
+  }
+
+  async getLectureActivity(lectureId: string, userId: string) {
+    const result = await this.prisma.lectureActivity.findUnique({
+      where: {
+        userId_lectureId: {
+          userId,
+          lectureId,
+        },
+      },
+    });
+
+    return result;
   }
 }
