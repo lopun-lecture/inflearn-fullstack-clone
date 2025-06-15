@@ -221,16 +221,25 @@ function Introduction({ course }: { course: CourseDetailDto }) {
 }
 
 function LectureRow({
+  courseId,
   lecture,
   className,
 }: {
+  courseId: string;
   lecture: LectureEntity;
   className?: string;
 }) {
+  const router = useRouter();
   return (
     <div
+      onClick={() => {
+        router.push(
+          `/courses/lecture?courseId=${courseId}&lectureId=${lecture.id}`
+        );
+      }}
       className={cn(
         "flex items-center justify-between text-sm px-4 py-3",
+        lecture.videoStorageInfo && "cursor-pointer",
         className
       )}
     >
@@ -240,14 +249,13 @@ function LectureRow({
         ) : (
           <LockIcon className="size-4 text-muted-foreground" />
         )}
-        <span>{lecture.title}</span>
+        <span className={lecture.videoStorageInfo && "underline"}>
+          {lecture.title}
+        </span>
       </div>
       <div className="flex items-center gap-2">
         {lecture.isPreview && (
-          <button
-            onClick={() => alert("구현 예정")}
-            className="cursor-pointer text-sm px-2 py-1 border border-gray-400 text-gray-800 font-semibold rounded-md"
-          >
+          <button className="cursor-pointer text-sm px-2 py-1 border border-gray-400 text-gray-800 font-semibold rounded-md">
             미리보기
           </button>
         )}
@@ -257,7 +265,13 @@ function LectureRow({
   );
 }
 
-function Curriculum({ sections }: { sections: SectionEntity[] }) {
+function Curriculum({
+  courseId,
+  sections,
+}: {
+  courseId: string;
+  sections: SectionEntity[];
+}) {
   return (
     <section id="curriculum" className="mt-12">
       <h2 className="text-2xl font-bold mb-6">커리큘럼</h2>
@@ -282,6 +296,7 @@ function Curriculum({ sections }: { sections: SectionEntity[] }) {
                     .map((lecture, idx) => (
                       <LectureRow
                         key={lecture.id}
+                        courseId={courseId}
                         lecture={lecture}
                         className={cn(
                           "h-12",
@@ -654,7 +669,7 @@ export default function CourseDetailUI({
         <div className="max-w-3xl">
           <Introduction course={course} />
           <InstructorBio instructor={course.instructor} />
-          <Curriculum sections={course.sections} />
+          <Curriculum courseId={course.id} sections={course.sections} />
           <ReviewsSection reviews={course.reviews} />
         </div>
 

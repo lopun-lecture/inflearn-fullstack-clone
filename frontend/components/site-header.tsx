@@ -28,9 +28,9 @@ export default function SiteHeader({
   categories: CourseCategory[];
 }) {
   const pathname = usePathname();
-  const isSiteHeaderNeeded = !pathname.match(
-    /^\/course\/[0-9a-f-]+(\/edit|\/edit\/.*)$/
-  );
+  const isSiteHeaderNeeded =
+    !pathname.match(/^\/course\/[0-9a-f-]+(\/edit|\/edit\/.*)$/) &&
+    !pathname.match(/^\/courses\/lecture/);
   const isCategoryNeeded = pathname == "/" || pathname.includes("/courses");
   const [search, setSearch] = useState("");
   const router = useRouter();
