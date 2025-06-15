@@ -3,8 +3,10 @@
 import React, { useMemo, useEffect, useState } from "react";
 import {
   CourseDetailDto,
+  LectureActivity as LectureActivityEntity,
   Lecture as LectureEntity,
   Section as SectionEntity,
+  UpdateLectureActivityDto,
 } from "@/generated/openapi-client";
 import {
   Accordion,
@@ -40,6 +42,8 @@ import {
   ListIcon,
   XIcon,
 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import * as api from "@/lib/api";
 
 /*****************
  * Helper Utils  *
@@ -184,8 +188,22 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   ),
 });
 
-function VideoPlayer({ lecture }: { lecture: LectureEntity }) {
+function VideoPlayer({
+  lecture,
+  lectureActivity,
+}: {
+  lecture: LectureEntity;
+  lectureActivity?: LectureActivityEntity;
+}) {
   const router = useRouter();
+  const updateLectureActivityMutation = useMutation({
+    mutationFn: (updateLectureActivityDto: UpdateLectureActivityDto) =>
+      api.updateLectureActivity(lecture.id, updateLectureActivityDto),
+    onSuccess: (result) => {
+      console.log("Update Lecture Activity Success");
+      console.log(result);
+    },
+  });
 
   const videoUrl = (lecture.videoStorageInfo as any)?.cloudFront?.url as
     | string
@@ -193,18 +211,32 @@ function VideoPlayer({ lecture }: { lecture: LectureEntity }) {
 
   const playerRef = React.useRef<any>(null);
   const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const hasSeekOnReadyRef = React.useRef(false);
 
-  const [playing, setPlaying] = React.useState(true);
-  const [muted, setMuted] = React.useState(false);
-  const [volume, setVolume] = React.useState(0.8);
-  const [played, setPlayed] = React.useState(0); // fraction 0~1
-  const [seeking, setSeeking] = React.useState(false);
-  const [duration, setDuration] = React.useState(0);
-  const [playbackRate, setPlaybackRate] = React.useState(1);
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(0.8);
+  const [played, setPlayed] = useState(0); // fraction 0~1
+  const [playedSeconds, setPlayedSeconds] = useState(0);
+  const [seeking, setSeeking] = useState(false);
+  const [totalDuration, setTotalDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    hasSeekOnReadyRef.current = false;
+    setPlayed(0);
+    setPlayedSeconds(0);
+  }, [lecture.id]);
 
   const handlePlayPause = () => {
     setPlaying((p) => !p);
+    updateLectureActivityMutation.mutate({
+      duration: playedSeconds,
+      isCompleted: played >= 0.95,
+      lastWatchedAt: new Date().toISOString(),
+      progress: Math.round(played * 100),
+    });
   };
 
   const handleMute = () => {
@@ -226,8 +258,24 @@ function VideoPlayer({ lecture }: { lecture: LectureEntity }) {
     playerRef.current?.seekTo(fraction, "fraction");
   };
 
-  const handleProgress = (state: { played: number }) => {
+  const handleProgress = (state: { played: number; playedSeconds: number }) => {
     if (!seeking) setPlayed(state.played);
+    setPlayedSeconds(Math.floor(state.playedSeconds));
+    updateLectureActivityMutation.mutate({
+      duration: playedSeconds,
+      isCompleted: played >= 0.95,
+      lastWatchedAt: new Date().toISOString(),
+      progress: Math.round(played * 100),
+    });
+  };
+
+  const handleEnded = () => {
+    updateLectureActivityMutation.mutate({
+      duration: Math.round(totalDuration),
+      isCompleted: true,
+      lastWatchedAt: new Date().toISOString(),
+      progress: 100,
+    });
   };
 
   const toggleFullscreen = () => {
@@ -271,8 +319,15 @@ function VideoPlayer({ lecture }: { lecture: LectureEntity }) {
         height="100%"
         style={{ backgroundColor: "black" }}
         onProgress={handleProgress}
-        onDuration={setDuration}
+        onDuration={setTotalDuration}
+        onEnded={handleEnded}
         playbackRate={playbackRate}
+        onReady={() => {
+          if (lectureActivity && !hasSeekOnReadyRef.current) {
+            hasSeekOnReadyRef.current = true;
+            playerRef.current?.seekTo(lectureActivity.duration, "seconds");
+          }
+        }}
       />
 
       {/* Lecture title overlay */}
@@ -315,7 +370,7 @@ function VideoPlayer({ lecture }: { lecture: LectureEntity }) {
 
             {/* time */}
             <span className="tabular-nums text-xs">
-              {formatTime(played * duration)} / {formatTime(duration)}
+              {formatTime(played * totalDuration)} / {formatTime(totalDuration)}
             </span>
 
             {/* volume */}
@@ -406,25 +461,28 @@ function LectureHeader({
 export default function UI({
   course,
   lectureId,
+  lectureActivities,
 }: {
   course: CourseDetailDto;
   lectureId?: string;
+  lectureActivities: LectureActivityEntity[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentLectureId = lectureId ?? course.sections[0].lectures[0].id;
 
   const allLectures = useMemo(() => {
     return course.sections.flatMap((section) => section.lectures);
   }, [course.sections]);
 
   const currentLecture = useMemo(() => {
-    if (lectureId) {
-      const found = allLectures.find((l) => l.id === lectureId);
+    if (currentLectureId) {
+      const found = allLectures.find((l) => l.id === currentLectureId);
       if (found) return found;
     }
     // fallback to first lecture
     return allLectures[0];
-  }, [lectureId, allLectures]);
+  }, [currentLectureId, allLectures]);
 
   const handleSelectLecture = (lecture: LectureEntity) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -437,13 +495,18 @@ export default function UI({
     (l) => l.id === currentLecture.id
   );
 
-  const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="flex w-screen absolute top-0 left-1/2 -translate-x-1/2 h-screen bg-black">
       {/* Video area */}
       <div className="flex-1 relative">
-        <VideoPlayer lecture={currentLecture} />
+        <VideoPlayer
+          lecture={currentLecture}
+          lectureActivity={lectureActivities.find(
+            (activity) => activity.lectureId === currentLectureId
+          )}
+        />
 
         {/* Floating button to open sidebar when closed */}
         {!sidebarOpen && (
