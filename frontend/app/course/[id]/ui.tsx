@@ -20,9 +20,12 @@ import {
   LockIcon,
   ShoppingCartIcon,
   HeartIcon,
+  Loader2,
+  PencilIcon,
+  Trash2Icon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getLevelText } from "@/lib/level";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as api from "@/lib/api";
@@ -92,6 +95,216 @@ function StarRating({ rating }: { rating: number }) {
         />
       ))}
     </div>
+  );
+}
+
+function InteractiveStarRating({
+  rating,
+  onRatingChange,
+}: {
+  rating: number;
+  onRatingChange: (rating: number) => void;
+}) {
+  const [hoverRating, setHoverRating] = useState(0);
+
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 5 }).map((_, i) => {
+        const starValue = i + 1;
+        const isActive = starValue <= (hoverRating || rating);
+
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onRatingChange(starValue)}
+            onMouseEnter={() => setHoverRating(starValue)}
+            onMouseLeave={() => setHoverRating(0)}
+            className="p-1 transition-colors"
+          >
+            <StarIcon
+              className={cn(
+                "size-8 transition-colors",
+                isActive
+                  ? "fill-yellow-400 stroke-yellow-400"
+                  : "stroke-gray-300 hover:stroke-yellow-400"
+              )}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReviewModal({
+  courseId,
+  isOpen,
+  onClose,
+  setShowReviewModal,
+  editingReview,
+}: {
+  courseId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  setShowReviewModal: (show: boolean) => void;
+  editingReview?: CourseReviewEntity;
+}) {
+  const [rating, setRating] = useState(0);
+  const [content, setContent] = useState("");
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editingReview) {
+        setRating(editingReview.rating);
+        setContent(editingReview.content);
+      } else {
+        setRating(0);
+        setContent("");
+      }
+    }
+  }, [isOpen, editingReview]);
+
+  const createReviewMutation = useMutation({
+    mutationFn: () =>
+      api.createReview(courseId, {
+        content,
+        rating,
+      }),
+    onSuccess: () => {
+      toast.success("수강평이 등록되었습니다.");
+      setShowReviewModal(false);
+      window.location.reload();
+    },
+  });
+
+  const updateReviewMutation = useMutation({
+    mutationFn: () =>
+      api.updateReview(editingReview!.id, {
+        content,
+        rating,
+      }),
+    onSuccess: () => {
+      toast.success("수강평이 수정되었습니다.");
+      setShowReviewModal(false);
+      window.location.reload();
+    },
+  });
+
+  const handleSubmit = () => {
+    if (rating === 0) {
+      alert("별점을 선택해주세요.");
+      return;
+    }
+    if (!content.trim()) {
+      alert("수강평을 작성해주세요.");
+      return;
+    }
+
+    if (editingReview) {
+      updateReviewMutation.mutate();
+    } else {
+      createReviewMutation.mutate();
+    }
+  };
+
+  const isLoading =
+    createReviewMutation.isPending || updateReviewMutation.isPending;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center text-lg font-semibold">
+            {editingReview
+              ? "수강평 수정하기"
+              : "힘이 되는 수강평을 남겨주세요!"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          <div className="flex justify-center">
+            <InteractiveStarRating rating={rating} onRatingChange={setRating} />
+          </div>
+
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="수강평을 작성해보세요!"
+            className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
+        </div>
+
+        <DialogFooter className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50"
+          >
+            {isLoading ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <span>{editingReview ? "수정하기" : "저장하기"}</span>
+            )}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  isLoading,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading: boolean;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-center">수강평 삭제</DialogTitle>
+          <DialogDescription className="text-center">
+            정말로 이 수강평을 삭제하시겠습니까?
+            <br />
+            삭제된 수강평은 복구할 수 없습니다.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogFooter className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50"
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
+          >
+            {isLoading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              "삭제"
+            )}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -315,32 +528,151 @@ function Curriculum({
   );
 }
 
-function ReviewsSection({ reviews }: { reviews: CourseReviewEntity[] }) {
-  if (!reviews.length) return null;
+function ReviewsSection({ courseId, user }: { courseId: string; user?: User }) {
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<
+    "latest" | "oldest" | "rating_high" | "rating_low"
+  >("latest");
+  const [hasNext, setHasNext] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [editingReview, setEditingReview] = useState<
+    CourseReviewEntity | undefined
+  >();
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const pageSize = 10;
+  const [totalReviews, setTotalReviews] = useState<CourseReviewEntity[]>([]);
+  const [myReviewExists, setMyReviewExists] = useState(false);
+  const router = useRouter();
+
+  const loadReviews = useCallback(
+    async (pageNumber: number, reset = false) => {
+      setIsLoading(true);
+      try {
+        const res = await api.getCourseReviews(
+          courseId,
+          pageNumber,
+          pageSize,
+          sort
+        );
+        if (res.data?.reviews) {
+          setTotalReviews((existingReviews) =>
+            reset
+              ? res.data!.reviews
+              : [...existingReviews, ...res.data!.reviews]
+          );
+          setHasNext(res.data.hasNext);
+          setMyReviewExists(res.data.myReviewExists);
+        }
+      } catch (error) {
+        console.error("Failed to load reviews:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [courseId, sort, pageSize]
+  );
+
+  useEffect(() => {
+    loadReviews(1, true);
+    setPage(1);
+  }, [loadReviews]);
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadReviews(nextPage, false);
+  };
+
+  const handleEditReview = (review: CourseReviewEntity) => {
+    setEditingReview(review);
+    setShowReviewModal(true);
+  };
+
+  const handleDeleteReview = (reviewId: string) => {
+    setDeletingReviewId(reviewId);
+    setShowDeleteDialog(true);
+  };
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: () => api.deleteReview(deletingReviewId!),
+    onSuccess: () => {
+      toast.success("수강평이 삭제되었습니다.");
+      setShowDeleteDialog(false);
+      setDeletingReviewId(null);
+      window.location.reload();
+    },
+    onError: () => {
+      toast.error("수강평 삭제에 실패했습니다.");
+    },
+  });
+
+  const confirmDeleteReview = () => {
+    deleteReviewMutation.mutate();
+  };
+
+  const handleCloseModal = () => {
+    setShowReviewModal(false);
+    setEditingReview(undefined);
+  };
+
   return (
     <section id="reviews" className="mt-12">
-      <h2 className="text-2xl font-bold mb-6">수강평</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">수강평</h2>
+        {user && !myReviewExists && (
+          <button
+            onClick={() => setShowReviewModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors"
+          >
+            수강평 남기기
+          </button>
+        )}
+      </div>
+
       <div className="space-y-8">
-        {reviews.map((r) => (
+        {totalReviews.map((r) => (
           <div key={r.id} className="space-y-4">
-            <div className="flex items-center gap-4">
-              {r.user?.image && (
-                <Image
-                  src={r.user.image}
-                  alt={r.user.name || "user"}
-                  width={40}
-                  height={40}
-                  className="rounded-full object-cover"
-                />
-              )}
-              <div>
-                <p className="font-medium">{r.user?.name ?? "익명"}</p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <StarRating rating={r.rating} />
-                  <span>{formatDate(r.createdAt)}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {r.user?.image && (
+                  <Image
+                    src={r.user.image}
+                    alt={r.user.name || "user"}
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover"
+                  />
+                )}
+                <div>
+                  <p className="font-medium">{r.user?.name ?? "익명"}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <StarRating rating={r.rating} />
+                    <span>{formatDate(r.createdAt)}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* 수정/삭제 버튼 - 본인 리뷰만 */}
+              {user && r.user?.id === user.id && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEditReview(r)}
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteReview(r.id)}
+                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
+
             <p className="text-sm whitespace-pre-wrap leading-relaxed">
               {r.content}
             </p>
@@ -355,6 +687,41 @@ function ReviewsSection({ reviews }: { reviews: CourseReviewEntity[] }) {
           </div>
         ))}
       </div>
+
+      {hasNext && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={handleLoadMore}
+            disabled={isLoading}
+            className={cn(
+              "px-6 py-2 text-sm font-medium border border-gray-300 rounded-md transition-colors",
+              isLoading
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+            )}
+          >
+            {isLoading ? "로딩 중..." : "더보기"}
+          </button>
+        </div>
+      )}
+
+      <ReviewModal
+        courseId={courseId}
+        isOpen={showReviewModal}
+        onClose={handleCloseModal}
+        setShowReviewModal={setShowReviewModal}
+        editingReview={editingReview}
+      />
+
+      <DeleteConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setDeletingReviewId(null);
+        }}
+        onConfirm={confirmDeleteReview}
+        isLoading={deleteReviewMutation.isPending}
+      />
     </section>
   );
 }
@@ -670,7 +1037,7 @@ export default function CourseDetailUI({
           <Introduction course={course} />
           <InstructorBio instructor={course.instructor} />
           <Curriculum courseId={course.id} sections={course.sections} />
-          <ReviewsSection reviews={course.reviews} />
+          <ReviewsSection courseId={course.id} user={user} />
         </div>
 
         {/* Floating menu */}

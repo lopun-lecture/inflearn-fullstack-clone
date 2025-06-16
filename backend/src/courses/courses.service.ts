@@ -455,6 +455,7 @@ export class CoursesService {
     page: number,
     pageSize: number,
     sort: 'latest' | 'oldest' | 'rating_high' | 'rating_low',
+    userId?: string,
   ): Promise<CourseReviewsResponseDto> {
     const where: Prisma.CourseReviewWhereInput = {
       courseId,
@@ -477,14 +478,34 @@ export class CoursesService {
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
+    const myReview =
+      userId &&
+      (await this.prisma.courseReview.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId,
+          },
+        },
+      }));
     const reviews = await this.prisma.courseReview.findMany({
       where,
       orderBy,
       skip,
       take: pageSize,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+      },
     });
 
     return {
+      myReviewExists: !!myReview,
       totalReviewCount: totalItems,
       currentPage: page,
       pageSize,
@@ -538,10 +559,18 @@ export class CoursesService {
 
     const review = await this.prisma.courseReview.create({
       data: {
-        userId,
-        courseId,
         content: createReviewDto.content,
         rating: createReviewDto.rating,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+        course: {
+          connect: {
+            id: courseId,
+          },
+        },
       },
     });
 

@@ -3,6 +3,11 @@ import { IsArray, IsBoolean, IsNotEmpty, IsNumber } from 'class-validator';
 import { CourseReview as CourseReviewEntity } from 'src/_gen/prisma-class/course_review';
 
 export class CourseReviewsResponseDto {
+  @ApiProperty({ description: '내 리뷰 존재 여부', type: Boolean })
+  @IsBoolean()
+  @IsNotEmpty()
+  myReviewExists: boolean;
+
   @ApiProperty({ description: '총 리뷰 수', type: Number })
   @IsNumber()
   @IsNotEmpty()
