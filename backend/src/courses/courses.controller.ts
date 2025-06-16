@@ -276,4 +276,16 @@ export class CoursesController {
       instructorReplyDto,
     );
   }
+
+  @Get('reviews/instructor')
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOkResponse({
+    description: '강사의 모든 강의의 리뷰 조회',
+    type: CourseReviewEntity,
+    isArray: true,
+  })
+  getInstructorReviews(@Req() req: Request) {
+    return this.coursesService.getInstructorReviews(req.user.sub);
+  }
 }
