@@ -27,7 +27,7 @@ const sidebarItems = [
   },
   {
     label: "강의 질문 관리",
-    href: "/instructor#",
+    href: "/instructor/questions",
   },
   {
     label: "수강평 리스트",

@@ -15,6 +15,9 @@ export default function InstructorPageName() {
       case "/instructor/courses":
         setTitle("강의 관리");
         break;
+      case "/instructor/questions":
+        setTitle("질문 관리");
+        break;
       default:
         setTitle("대시보드");
     }
