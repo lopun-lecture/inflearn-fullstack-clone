@@ -14,6 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeftIcon,
@@ -57,6 +58,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { User } from "next-auth";
+import QuestionsSection from "./_components/questions-section";
 
 /*****************
  * Helper Utils  *
@@ -119,18 +121,22 @@ function Sidebar({
   onSelectLecture,
   course,
   onClose,
+  user,
 }: {
   sections: SectionEntity[];
   currentLectureId?: string;
   onSelectLecture: (lecture: LectureEntity) => void;
   course: CourseDetailDto;
   onClose: () => void;
+  user?: User;
 }) {
   return (
     <aside className="hidden lg:flex flex-col w-80 h-screen bg-white border-l shadow-lg">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <p className="font-bold text-lg flex-1">커리큘럼</p>
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <h2 className="text-lg font-semibold" title={course.title}>
+          {course.title}
+        </h2>
         <button
           className="p-1 text-muted-foreground hover:text-foreground"
           onClick={onClose}
@@ -140,45 +146,55 @@ function Sidebar({
         </button>
       </div>
 
-      <h2 className="text-h2 text-lg font-semibold p-4" title={course.title}>
-        {course.title}
-      </h2>
+      {/* Tabs */}
+      <Tabs defaultValue="curriculum" className="flex-1 flex flex-col p-2">
+        <TabsList className="grid w-full grid-cols-2 my-4 mb-2">
+          <TabsTrigger value="curriculum">커리큘럼</TabsTrigger>
+          <TabsTrigger value="qa">질문&답변</TabsTrigger>
+        </TabsList>
 
-      <div className="flex-1 overflow-y-auto">
-        <Accordion type="multiple" className="w-full">
-          {sections.map((section) => (
-            <AccordionItem
-              key={section.id}
-              value={section.id}
-              className="border-b last:border-b-0"
-            >
-              <AccordionTrigger className="flex text-sm font-medium px-4 py-3 bg-muted/50 hover:no-underline">
-                <span className="flex-1 text-left truncate">
-                  {section.title}
-                </span>
-                <span className="ml-2 text-xs font-medium text-muted-foreground">
-                  {section.lectures.length}개
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="bg-background">
-                <div className="flex flex-col">
-                  {section.lectures
-                    .sort((a, b) => a.order - b.order)
-                    .map((lecture) => (
-                      <LectureRow
-                        key={lecture.id}
-                        lecture={lecture}
-                        isActive={lecture.id === currentLectureId}
-                        onSelect={() => onSelectLecture(lecture)}
-                        completed={false /* TODO: replace with real progress */}
-                      />
-                    ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
+        <TabsContent value="curriculum" className="flex-1 overflow-y-auto mt-0">
+          <Accordion type="multiple" className="w-full">
+            {sections.map((section) => (
+              <AccordionItem
+                key={section.id}
+                value={section.id}
+                className="border-b last:border-b-0"
+              >
+                <AccordionTrigger className="flex text-sm font-medium px-4 py-3 bg-muted/50 hover:no-underline">
+                  <span className="flex-1 text-left truncate">
+                    {section.title}
+                  </span>
+                  <span className="ml-2 text-xs font-medium text-muted-foreground">
+                    {section.lectures.length}개
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="bg-background">
+                  <div className="flex flex-col">
+                    {section.lectures
+                      .sort((a, b) => a.order - b.order)
+                      .map((lecture) => (
+                        <LectureRow
+                          key={lecture.id}
+                          lecture={lecture}
+                          isActive={lecture.id === currentLectureId}
+                          onSelect={() => onSelectLecture(lecture)}
+                          completed={
+                            false /* TODO: replace with real progress */
+                          }
+                        />
+                      ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </TabsContent>
+
+        <TabsContent value="qa" className="flex-1 overflow-y-auto mt-0 px-4">
+          <QuestionsSection courseId={course.id} user={user} />
+        </TabsContent>
+      </Tabs>
     </aside>
   );
 }
@@ -675,7 +691,7 @@ export default function UI({
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex w-screen absolute top-0 left-1/2 -translate-x-1/2 h-screen bg-black">
+    <div className="flex w-full h-screen bg-black fixed inset-0">
       {/* Video area */}
       <div className="flex-1 relative">
         <VideoPlayer
@@ -707,6 +723,7 @@ export default function UI({
           onSelectLecture={handleSelectLecture}
           course={course}
           onClose={() => setSidebarOpen(false)}
+          user={user}
         />
       )}
     </div>
