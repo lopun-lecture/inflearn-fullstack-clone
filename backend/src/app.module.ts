@@ -12,6 +12,7 @@ import { MediaModule } from './media/media.module';
 import { UsersModule } from './users/users.module';
 import { CommentsModule } from './comments/comments.module';
 import { QuestionsModule } from './questions/questions.module';
+import { CartsModule } from './carts/carts.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { QuestionsModule } from './questions/questions.module';
     UsersModule,
     CommentsModule,
     QuestionsModule,
+    CartsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
