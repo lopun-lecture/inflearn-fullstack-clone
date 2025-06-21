@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  cartsControllerAddToCart,
+  cartsControllerClearCart,
+  cartsControllerGetCartItems,
+  cartsControllerRemoveFromCart,
   categoriesControllerFindAll,
   commentsControllerCreate,
   commentsControllerRemove,
@@ -477,6 +481,40 @@ export const removeComment = async (commentId: string) => {
 
 export const getAllInstructorQuestions = async () => {
   const { data, error } = await questionsControllerFindAllByInstructorId({});
+
+  return { data, error };
+};
+
+export const addToCart = async (courseId: string) => {
+  const { data, error } = await cartsControllerAddToCart({
+    body: {
+      courseId,
+    },
+  });
+  console.log(data, error);
+
+  return { data, error };
+};
+
+export const getCartItems = async () => {
+  const { data, error } = await cartsControllerGetCartItems();
+  console.log(data);
+
+  return { data, error };
+};
+
+export const removeFromCart = async (courseId: string) => {
+  const { data, error } = await cartsControllerRemoveFromCart({
+    path: {
+      courseId,
+    },
+  });
+
+  return { data, error };
+};
+
+export const clearCart = async () => {
+  const { data, error } = await cartsControllerClearCart();
 
   return { data, error };
 };

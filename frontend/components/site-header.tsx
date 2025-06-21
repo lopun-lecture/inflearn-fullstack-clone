@@ -1,11 +1,12 @@
 "use client";
 
 import { CourseCategory, User } from "@/generated/openapi-client";
-import { Layers, Search } from "lucide-react";
+import { Layers, Search, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -17,6 +18,8 @@ import { CATEGORY_ICONS } from "@/app/constants/category-icons";
 import React, { useState } from "react";
 import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
+import * as api from "@/lib/api";
 
 export default function SiteHeader({
   session,
@@ -34,8 +37,29 @@ export default function SiteHeader({
   const isCategoryNeeded = pathname == "/" || pathname.includes("/courses");
   const [search, setSearch] = useState("");
   const router = useRouter();
+  const cartItemsQuery = useQuery({
+    queryFn: () => api.getCartItems(),
+    queryKey: ["cart-items"],
+  });
+
+  // 최신 3개 아이템만 표시
+  const recentCartItems =
+    cartItemsQuery?.data?.data?.items
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+      .slice(0, 3) ?? [];
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("ko-KR").format(price);
+  };
 
   if (!isSiteHeaderNeeded) return null;
+
+  if (cartItemsQuery.isLoading) {
+    return <div>로딩중...</div>;
+  }
 
   return (
     <header className="relative site-header w-full bg-white">
@@ -108,6 +132,92 @@ export default function SiteHeader({
             지식공유자
           </Button>
         </Link>
+
+        {/* 장바구니 아이콘 + Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <ShoppingCart className="size-5 text-gray-600" />
+              {cartItemsQuery?.data?.data?.totalCount ??
+                (0 > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0 bg-red-500"
+                  >
+                    {cartItemsQuery?.data?.data?.totalCount}
+                  </Badge>
+                ))}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0">
+            <div className="p-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800">수강바구니</h3>
+            </div>
+
+            {cartItemsQuery?.data?.data?.totalCount === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                장바구니가 비어있습니다.
+              </div>
+            ) : (
+              <>
+                <div className="max-h-64 overflow-y-auto">
+                  {recentCartItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0"
+                    >
+                      <div className="relative w-12 h-8 flex-shrink-0">
+                        {item.course.thumbnailUrl && (
+                          <Image
+                            src={item.course.thumbnailUrl}
+                            alt={item.course.title}
+                            fill
+                            className="rounded object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 truncate">
+                          {item.course.title}
+                        </h4>
+                        <p className="text-xs text-gray-500">
+                          {item.course.instructor.name}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.course.discountPrice &&
+                          item.course.discountPrice < item.course.price ? (
+                            <>
+                              <span className="text-xs font-semibold text-gray-900">
+                                ₩{formatPrice(item.course.discountPrice)}
+                              </span>
+                              <span className="text-xs text-gray-400 line-through">
+                                ₩{formatPrice(item.course.price)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs font-semibold text-gray-900">
+                              ₩{formatPrice(item.course.price)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-3 bg-gray-50">
+                  <Button
+                    onClick={() => router.push("/carts")}
+                    className="w-full bg-[#1dc078] hover:bg-[#1dc078]/90 text-white font-medium"
+                  >
+                    수강바구니에서 전체보기
+                  </Button>
+                </div>
+              </>
+            )}
+          </PopoverContent>
+        </Popover>
+
         {/* Avatar + Popover or 로그인 버튼 */}
         {session ? (
           <Popover>
