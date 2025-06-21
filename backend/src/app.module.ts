@@ -15,9 +15,15 @@ import { QuestionsModule } from './questions/questions.module';
 import { CartsModule } from './carts/carts.module';
 import { PaymentsModule } from './payments/payments.module';
 import { BatchModule } from './batch/batch.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
+    CacheModule.register({
+      ttl: 60 * 1000,
+      max: 1000,
+      isGlobal: true,
+    }),
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     PrismaModule,
