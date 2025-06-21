@@ -15,6 +15,7 @@ import {
   coursesControllerCreateReview,
   coursesControllerDeleteReview,
   coursesControllerEnrollCourse,
+  coursesControllerFindAllInstructorCourses,
   coursesControllerFindAllMyCourses,
   coursesControllerFindOne,
   coursesControllerGetCourseReviews,
@@ -36,6 +37,7 @@ import {
   lecturesControllerUpdate,
   lecturesControllerUpdateLectureActivity,
   mediaControllerUploadMedia,
+  paymentsControllerVerifyPayment,
   questionsControllerCreate,
   questionsControllerFindAll,
   questionsControllerFindAllByInstructorId,
@@ -55,6 +57,7 @@ import {
   UpdateUserDto,
   usersControllerGetProfile,
   usersControllerUpdateProfile,
+  VerifyPaymentDto,
 } from "@/generated/openapi-client";
 import { Bodoni_Moda } from "next/font/google";
 import path from "path";
@@ -69,6 +72,15 @@ export const getAllCategories = async () => {
 };
 
 export const getAllInstructorCourses = async () => {
+  const { data, error } = await coursesControllerFindAllInstructorCourses();
+
+  return {
+    data,
+    error,
+  };
+};
+
+export const getAllMyCourses = async () => {
   const { data, error } = await coursesControllerFindAllMyCourses();
 
   return {
@@ -515,6 +527,14 @@ export const removeFromCart = async (courseId: string) => {
 
 export const clearCart = async () => {
   const { data, error } = await cartsControllerClearCart();
+
+  return { data, error };
+};
+
+export const verifyPayment = async (verifyPaymentDto: VerifyPaymentDto) => {
+  const { data, error } = await paymentsControllerVerifyPayment({
+    body: verifyPaymentDto,
+  });
 
   return { data, error };
 };

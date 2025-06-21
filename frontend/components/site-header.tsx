@@ -263,6 +263,12 @@ export default function SiteHeader({
               >
                 <div className="font-semibold text-gray-800">로그아웃</div>
               </button>
+              <button
+                className="w-full text-left px-4 py-3 hover:bg-gray-100 focus:outline-none border-t border-gray-100"
+                onClick={() => router.push("/my/courses")}
+              >
+                <div className="font-semibold text-gray-800">내 학습</div>
+              </button>
             </PopoverContent>
           </Popover>
         ) : (

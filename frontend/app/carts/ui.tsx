@@ -2,7 +2,7 @@
 
 import { Course } from "@/generated/openapi-client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/api";
+import PortOne from "@portone/browser-sdk/v2";
+import { toast } from "sonner";
 
 // 임시 장바구니 데이터 타입
 interface CartItem {
@@ -27,6 +29,9 @@ export default function CartUI() {
     customerPhone: "",
   });
 
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ko-KR").format(price);
   };
@@ -38,10 +43,20 @@ export default function CartUI() {
     return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
   };
 
+  const generatePaymentId = () =>
+    `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
   const cartItemsQuery = useQuery({
     queryFn: () => api.getCartItems(),
     queryKey: ["cart-items"],
+    select: (data) => data.data,
   });
+
+  useEffect(() => {
+    if (cartItemsQuery.data?.items) {
+      setSelectedItems(cartItemsQuery.data.items.map((item) => item.courseId));
+    }
+  }, [cartItemsQuery.data]);
 
   const removeFromCartMutation = useMutation({
     mutationFn: (courseId: string) => api.removeFromCart(courseId),
@@ -50,15 +65,45 @@ export default function CartUI() {
     },
   });
 
-  const totalOriginalPrice = cartItemsQuery.data?.data?.totalAmount ?? 0;
-  const totalDiscountPrice =
-    cartItemsQuery?.data?.data?.items.reduce(
-      (sum, item) => sum + (item.course.discountPrice || item.course.price),
-      0
-    ) ?? 0;
+  const selectedCartItems =
+    cartItemsQuery?.data?.items?.filter((item) =>
+      selectedItems.includes(item.courseId)
+    ) || [];
+
+  const totalOriginalPrice = selectedCartItems.reduce(
+    (sum, item) => sum + item.course.price,
+    0
+  );
+  const totalDiscountPrice = selectedCartItems.reduce(
+    (sum, item) => sum + (item.course.discountPrice || item.course.price),
+    0
+  );
   const totalDiscount = totalOriginalPrice - totalDiscountPrice;
 
-  const handlePayment = () => {
+  const handleSelectAll = () => {
+    if (selectedItems.length === cartItemsQuery.data?.items?.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(
+        cartItemsQuery.data?.items?.map((item) => item.courseId) || []
+      );
+    }
+  };
+
+  const handleSelectItem = (courseId: string) => {
+    setSelectedItems((prev) =>
+      prev.includes(courseId)
+        ? prev.filter((id) => id !== courseId)
+        : [...prev, courseId]
+    );
+  };
+
+  const handlePayment = async () => {
+    if (selectedItems.length === 0) {
+      alert("결제할 강의를 선택해주세요");
+      return;
+    }
+
     if (
       !customerInfo.customerEmail ||
       !customerInfo.customerName ||
@@ -67,14 +112,70 @@ export default function CartUI() {
       alert("구매자 정보를 모두 입력해주세요.");
       return;
     }
-    alert("결제 기능은 준비 중입니다.");
+
+    setIsPaymentProcessing(true);
+
+    try {
+      const paymentId = generatePaymentId();
+      const orderName =
+        selectedCartItems.length === 1
+          ? selectedCartItems[0].course.title
+          : `${selectedCartItems[0].course.title} 외 ${
+              selectedCartItems.length - 1
+            }개`;
+
+      const payment = await PortOne.requestPayment({
+        storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || "store-test",
+        channelKey:
+          process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || "channel-test-key",
+        paymentId,
+        orderName,
+        totalAmount: totalDiscountPrice,
+        currency: "CURRENCY_KRW",
+        payMethod: "CARD",
+        customer: {
+          fullName: customerInfo.customerName,
+          email: customerInfo.customerEmail,
+          phoneNumber: customerInfo.customerPhone,
+        },
+        customData: {
+          items: selectedCartItems.map((item) => ({
+            courseId: item.courseId,
+            price: item.course.discountPrice || item.course.price,
+          })),
+          customerInfo,
+        },
+      });
+
+      if (!payment || payment.code !== undefined) {
+        alert(`결제 실패: ${payment?.message || "알 수 없는 오류"}`);
+        return;
+      }
+
+      const result = await api.verifyPayment({ paymentId });
+
+      console.log("Payment 결과", result);
+
+      if ((result.data as any)["success"]) {
+        toast.success("결제가 완료되었습니다!");
+        queryClient.invalidateQueries({ queryKey: ["cart-items"] });
+        router.push("/my/courses");
+      } else {
+        alert(`결제 검증 실패: ${(result.data as any)["message"]}`);
+      }
+    } catch (error) {
+      console.error("결제 오류", error);
+      alert("결제 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsPaymentProcessing(false);
+    }
   };
 
   if (cartItemsQuery.isLoading) {
     return <div>로딩중...</div>;
   }
 
-  if (cartItemsQuery?.data?.data?.totalCount === 0) {
+  if (cartItemsQuery?.data?.totalCount === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-8">수강바구니</h1>
@@ -97,21 +198,37 @@ export default function CartUI() {
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedItems.length ===
+                      cartItemsQuery.data?.items?.length &&
+                    selectedItems.length > 0
+                  }
+                  readOnly
+                  className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                />
+              </button>
               전체선택{" "}
               <span className="text-green-600">
-                1/{cartItemsQuery?.data?.data?.totalCount}
+                {selectedItems.length}/{cartItemsQuery?.data?.totalCount}
               </span>
             </h2>
           </div>
 
-          {cartItemsQuery?.data?.data?.items.map((item) => (
+          {cartItemsQuery?.data?.items.map((item) => (
             <div
               key={item.id}
               className="flex items-center gap-4 p-4 border rounded-lg bg-white"
             >
               <input
                 type="checkbox"
-                defaultChecked
+                checked={selectedItems.includes(item.courseId)}
+                onChange={() => handleSelectItem(item.courseId)}
                 className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
               />
 
@@ -295,9 +412,10 @@ export default function CartUI() {
             {/* 결제 버튼 */}
             <Button
               onClick={handlePayment}
+              disabled={isPaymentProcessing}
               className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
             >
-              결제하기
+              {isPaymentProcessing ? "결제 진행 중..." : "결제하기"}
             </Button>
           </div>
         </div>

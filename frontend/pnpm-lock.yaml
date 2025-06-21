@@ -17,6 +17,9 @@ dependencies:
   '@hookform/resolvers':
     specifier: ^5.0.1
     version: 5.0.1(react-hook-form@7.55.0)
+  '@portone/browser-sdk':
+    specifier: ^0.0.23
+    version: 0.0.23
   '@prisma/client':
     specifier: ^6.6.0
     version: 6.6.0(prisma@6.6.0)(typescript@5.8.3)
@@ -2510,6 +2513,10 @@ packages:
 
   /@panva/hkdf@1.2.1:
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
+    dev: false
+
+  /@portone/browser-sdk@0.0.23:
+    resolution: {integrity: sha512-fgUkPdNjvBArrcuBCtbGGhkHDhrR39WBFmXa3XNWjpYYbIS2ltOpw5R8Eu5SzSR9e/r8GSMmCuOhYr0f2j2Kng==}
     dev: false
 
   /@prisma/client@6.6.0(prisma@6.6.0)(typescript@5.8.3):

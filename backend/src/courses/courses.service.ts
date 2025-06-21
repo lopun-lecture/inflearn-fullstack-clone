@@ -56,6 +56,22 @@ export class CoursesService {
     });
   }
 
+  async findAllMyCourses(userId: string): Promise<Course[]> {
+    const enrollments = await this.prisma.courseEnrollment.findMany({
+      where: {
+        userId,
+      },
+    });
+
+    return this.prisma.course.findMany({
+      where: {
+        id: {
+          in: enrollments.map((enrollment) => enrollment.courseId),
+        },
+      },
+    });
+  }
+
   async findOne(id: string, userId?: string): Promise<CourseDetailDto | null> {
     const course = await this.prisma.course.findUnique({
       where: { id },
