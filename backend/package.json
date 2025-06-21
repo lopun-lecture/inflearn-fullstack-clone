@@ -32,6 +32,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/swagger": "^11.1.2",
+    "@portone/server-sdk": "^0.15.0",
     "@prisma/client": "^6.6.0",
     "@types/passport-local": "^1.0.38",
     "class-validator": "^0.14.1",
