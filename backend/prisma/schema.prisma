@@ -337,3 +337,14 @@ model Payment {
 
   @@map("payments")
 }
+
+model DailyPaymentStats {
+  id            String   @id @default(uuid())
+  date          DateTime @unique @db.Date // 통계 기준일
+  totalPayments Int      @default(0) @map("total_payments") // 총 결제 건수
+  totalAmount   Int      @default(0) @map("total_amount") // 총 결제 금액
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_payment_stats")
+}
