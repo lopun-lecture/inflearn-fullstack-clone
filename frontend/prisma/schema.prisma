@@ -62,6 +62,8 @@ model User {
   courseComments    CourseComment[]
   lectureActivities LectureActivity[]
   courseFavorites   CourseFavorite[]
+  cartItems         CartItem[]
+  orders            Order[]
 
   @@map("users")
 }
@@ -90,14 +92,17 @@ model Course {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  sections    Section[]
-  lectures    Lecture[]
-  categories  CourseCategory[]
-  enrollments CourseEnrollment[]
-  instructor  User               @relation(fields: [instructorId], references: [id])
-  reviews     CourseReview[]
-  questions   CourseQuestion[]
-  favorites   CourseFavorite[]
+  sections          Section[]
+  lectures          Lecture[]
+  categories        CourseCategory[]
+  enrollments       CourseEnrollment[]
+  instructor        User               @relation(fields: [instructorId], references: [id])
+  reviews           CourseReview[]
+  questions         CourseQuestion[]
+  favorites         CourseFavorite[]
+  lectureActivities LectureActivity[]
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
 
   @@map("courses")
 }
@@ -228,14 +233,101 @@ model CourseFavorite {
 model LectureActivity {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
+  courseId      String   @map("course_id")
   lectureId     String   @map("lecture_id")
   progress      Int      @default(0)
+  duration      Int      @default(0)
   isCompleted   Boolean  @default(false) @map("is_completed")
   lastWatchedAt DateTime @default(now()) @map("last_watched_at")
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, lectureId])
+  @@unique([userId, courseId, lectureId])
   @@map("lecture_activities")
+}
+
+// 장바구니 아이템
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  courseId  String   @map("course_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("cart_items")
+}
+
+// 주문
+model Order {
+  id             String   @id @default(uuid())
+  orderNumber    String   @unique @map("order_number") // 주문번호 (표시용)
+  userId         String   @map("user_id")
+  totalAmount    Int      @map("total_amount") // 총 주문 금액
+  discountAmount Int      @default(0) @map("discount_amount")
+  finalAmount    Int      @map("final_amount") // 최종 주문 금액
+  status         String   @default("PENDING") // PENDING, PAID, CANCELLED, FAILED
+  customerName   String?  @map("customer_name")
+  customerEmail  String?  @map("customer_email")
+  customerPhone  String?  @map("customer_phone")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+  payments   Payment[]
+
+  @@map("orders")
+}
+
+// 주문 아이템 모델
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String   @map("order_id")
+  courseId      String   @map("course_id")
+  courseName    String   @map("course_name") // 주문 당시 강의명 (스냅샷)
+  originalPrice Int      @map("original_price")
+  discountPrice Int?     @map("discount_price")
+  finalPrice    Int      @map("final_price")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
+
+// 결제 모델 (포트원 연동용)
+model Payment {
+  id                   String    @id @default(uuid())
+  paymentId            String    @unique @map("payment_id") // 포트원 결제 ID
+  orderId              String    @map("order_id")
+  transactionId        String?   @map("transaction_id") // 포트원 거래 ID
+  amount               Int       @map("amount")
+  currency             String    @default("KRW") // 화폐
+  paymentMethod        String    @map("payment_method") // 결제 수단 (CARD, VIRTUAL_ACCOUNT, etc)
+  pgProvider           String?   @map("pg_provider") // PG사 (tosspayments, etc)
+  status               String    @default("READY") // READY, PAID, FAILED, CANCELLED
+  failureReason        String?   @map("failure_reason")
+  paidAt               DateTime? @map("paid_at")
+  cancelledAt          DateTime? @map("cancelled_at")
+  // 가상계좌 정보
+  virtualAccountNumber String?   @map("virtual_account_number")
+  virtualAccountBank   String?   @map("virtual_account_bank")
+  virtualAccountHolder String?   @map("virtual_account_holder")
+  virtualAccountExpiry DateTime? @map("virtual_account_expiry")
+  // 포트원 웹훅 정보
+  portoneData          Json?     @map("portone_data") // 포트원에서 받은 전체 데이터
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
 }
