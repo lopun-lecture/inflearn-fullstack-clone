@@ -7,7 +7,7 @@ import * as jwt from "jsonwebtoken";
 import { JWT } from "next-auth/jwt";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  useSecureCookies: process.env.NODE_ENV === "production",
+  useSecureCookies: process.env.USE_HTTPS === "true",
   trustHost: true,
   adapter: PrismaAdapter(prisma),
   secret: process.env.AUTH_SECRET,

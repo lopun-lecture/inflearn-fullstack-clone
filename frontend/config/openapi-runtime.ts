@@ -4,7 +4,7 @@ import { getCookie } from "cookies-next/server";
 import { cookies } from "next/headers";
 
 const AUTH_COOKIE_NAME =
-  process.env.NODE_ENV === "production"
+  process.env.USE_HTTPS === "true"
     ? "__Secure-authjs.session-token"
     : "authjs.session-token";
 

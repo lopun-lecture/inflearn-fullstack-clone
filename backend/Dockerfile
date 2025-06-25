@@ -18,4 +18,4 @@ RUN pnpm run build
 
 EXPOSE 8000
 
-CMD ["pnpm", "run", "start:prod"]
+CMD ["node", "dist/src/main.js"]

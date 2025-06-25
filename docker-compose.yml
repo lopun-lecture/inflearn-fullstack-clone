@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: inflearn-clone-backend
+    ports:
+      - 8000:8000
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_MEDIA_S3_BUCKET_NAME=${AWS_MEDIA_S3_BUCKET_NAME}
+      - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN}
+      - PORTONE_API_SECRET=${PORTONE_API_SECRET}
+      - PORTONE_WEBHOOK_SECRET=${PORTONE_WEBHOOK_SECRET}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: inflearn-clone-frontend
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://backend:8000
+      - AUTH_SECRET=${AUTH_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN}
+      - NEXT_PUBLIC_PORTONE_STORE_ID=${NEXT_PUBLIC_PORTONE_STORE_ID}
+      - NEXT_PUBLIC_PORTONE_CHANNEL_KEY=${NEXT_PUBLIC_PORTONE_CHANNEL_KEY}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
