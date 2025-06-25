@@ -1,0 +1,53 @@
+name: EC2 배포
+
+on:
+  push:
+    branches: [main, part2] # 배포할 브랜치 설정
+  workflow_dispatch: # 수동 배포도 허용
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: EC2 배포
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        port: ${{ secrets.EC2_PORT || 22 }}
+        script: |
+          cd /home/${{ secrets.EC2_USERNAME }}/inflearn-fullstack-clone
+
+          # 최신 코드 가져오기
+          git pull
+
+          # 새로운 이미지 빌드
+          echo "이미지 빌드 시작"
+          sudo docker-compose build
+
+          # Prisma 마이그레이션 실행
+          echo "Prisma 마이그레이션 실행"
+          cd backend
+          pnpm prisma migrate deploy
+          cd ..
+
+          # 기존 컨테이너 중지 및 제거
+          echo "기존 컨테이너 중지 및 제거"
+          sudo docker-compose down
+
+          # 새로운 컨테이너 시작
+          echo "새로운 컨테이너 시작"
+          sudo docker-compose up -d
+
+          # 사용하지 않는 이미지 정리
+          echo "사용하지 않는 이미지 정리"
+          sudo docker image prune -f
+
+          echo "배포 완료"
+
+          sudo docker-compose ps
